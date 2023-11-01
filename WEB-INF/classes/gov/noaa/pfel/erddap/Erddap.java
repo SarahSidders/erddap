@@ -18,7 +18,6 @@ import com.cohort.util.Calendar2;
 import com.cohort.util.File2;
 import com.cohort.util.Math2;
 import com.cohort.util.MustBe;
-import com.cohort.util.ResourceBundle2;
 import com.cohort.util.SimpleException;
 import com.cohort.util.String2;
 import com.cohort.util.Test;
@@ -32,10 +31,8 @@ import gov.noaa.pfel.coastwatch.pointdata.Table;
 import gov.noaa.pfel.coastwatch.sgt.CompoundColorMap;
 import gov.noaa.pfel.coastwatch.sgt.SgtMap;
 import gov.noaa.pfel.coastwatch.sgt.SgtUtil;
-import gov.noaa.pfel.coastwatch.util.FileVisitorDNLS;
 import gov.noaa.pfel.coastwatch.util.HtmlWidgets;
 import gov.noaa.pfel.coastwatch.util.RegexFilenameFilter;
-import gov.noaa.pfel.coastwatch.util.SimpleXMLReader;
 import gov.noaa.pfel.coastwatch.util.SSR;
 
 import gov.noaa.pfel.erddap.dataset.*;
@@ -47,40 +44,23 @@ import java.awt.Font;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.image.BufferedImage;
-import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
-import java.io.BufferedWriter;
 import java.io.File;
-import java.io.FileInputStream;
 import java.io.FileOutputStream;
-import java.io.InputStream;
-import java.io.InputStreamReader;
 import java.io.IOException;
 import java.io.OutputStream;
-import java.io.OutputStreamWriter;
-import java.io.Reader;
 import java.io.StringReader;
 import java.io.Writer;
-import java.net.URLConnection;
 import java.text.MessageFormat;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.BitSet;
-import java.util.Collections;
+import java.util.*;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.TimeoutException;
-import java.util.GregorianCalendar;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.zip.ZipEntry;
 import java.util.zip.ZipOutputStream;
-import javax.imageio.ImageIO;
+
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServlet;
 import jakarta.servlet.http.HttpServletRequest;
@@ -97,7 +77,6 @@ import org.apache.lucene.search.Query;
 import org.apache.lucene.search.ScoreDoc;
 import org.apache.lucene.search.TermQuery;
 
-import org.json.JSONArray;
 import org.json.JSONObject;
 import org.json.JSONTokener;
 
@@ -184,6 +163,7 @@ public class Erddap extends HttpServlet {
     protected RunLoadDatasets runLoadDatasets;
     public AtomicInteger totalNRequests  = new AtomicInteger();
     public String lastReportDate = "";
+    RequestDetails userRequestDetails = new RequestDetails();
 
     /** Set by loadDatasets. */
     /** datasetHashMaps are read from many threads and written to by loadDatasets, 
@@ -485,7 +465,15 @@ public class Erddap extends HttpServlet {
             //  and block a request from processing until the number dips below MaxNRequests.
             //  Such a system would need good assurance that the list was valid
             //  (not old requests filling up the system but actually processed).
-            ipAddress = EDStatic.getIPAddress(request); 
+            ipAddress = EDStatic.getIPAddress(request);
+
+            // Sets the Request object values to be passed into the UsageMetrics
+            userRequestDetails.setDateTime(Calendar2.getCurrentISODateTimeStringLocalTZ());
+            userRequestDetails.setDataSetId(requestUrl);
+            userRequestDetails.setIpAddress(ipAddress);
+            userRequestDetails.setUrl(requestUrl);
+            userRequestDetails.setQueryParams(queryString);
+            userRequestDetails.setResponse("");
 
             //always log request as soon as all info known (even if request will soon be rejected)
             String summary = "{{{{#" + requestNumber + " " +
@@ -800,6 +788,12 @@ public class Erddap extends HttpServlet {
                         }
                     }
                 }
+                userRequestDetails.setResponse(String.valueOf(response));
+                    if(Objects.equals(userRequestDetails.getResponse(), "200")) {
+                        // Add logic for setVars here
+                        // Pass user request to UsageMetrics()
+
+                    }
             } catch (Throwable t2) {
                 String2.log("Caught: " + MustBe.throwableToString(t2));
             }
