@@ -788,11 +788,16 @@ public class Erddap extends HttpServlet {
                         }
                     }
                 }
+                // Send the user request details if the response was SUCCESS
+                // & it is a valid file type
                 userRequestDetails.setResponse(String.valueOf(response));
                     if(Objects.equals(userRequestDetails.getResponse(), "200")) {
-                        // Add logic for setVars here
-                        // Pass user request to UsageMetrics()
-
+                        for(String s : EDDTable.dataFileTypeNames) {
+                            if(userRequestDetails.getVariables().endsWith(s) &&
+                                    Objects.equals(userRequestDetails.getResponse(), "200")) {
+                                        UsageMetrics.sendUsageMetrics(userRequestDetails);
+                            }
+                        }
                     }
             } catch (Throwable t2) {
                 String2.log("Caught: " + MustBe.throwableToString(t2));
